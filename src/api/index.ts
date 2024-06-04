@@ -1,0 +1,232 @@
+import { ApolloClient, InMemoryCache, gql } from "@apollo/client";
+// interface
+import {
+  IFactoryResponse,
+  IPoolResponse,
+  ISwapResponse,
+  ITokenResponse,
+} from "./interface";
+
+const SUBGRAPH_API_KEY = process.env.NEXT_PUBLIC_SUBGRAPH_API_KEY;
+
+const uniswapGraphQLEndpoint = `https://gateway-arbitrum.network.thegraph.com/api/${SUBGRAPH_API_KEY}/deployments/id/QmZeCuoZeadgHkGwLwMeguyqUKz1WPWQYKcKyMCeQqGhsF`;
+
+const uniswapClient = new ApolloClient({
+  cache: new InMemoryCache(),
+  uri: uniswapGraphQLEndpoint,
+});
+
+export const getCurrentFactory = async (): Promise<IFactoryResponse> => {
+  let response: IFactoryResponse = {
+    data: {
+      id: "",
+      poolCount: "",
+      totalFeesETH: "",
+      totalFeesUSD: "",
+      totalValueLockedETH: "",
+      totalValueLockedUSD: "",
+      totalVolumeUSD: "",
+      totalVolumeETH: "",
+      txCount: "",
+    },
+    error: "",
+    success: false,
+  };
+
+  try {
+    if (!SUBGRAPH_API_KEY) {
+      throw new Error(
+        "Missing `NEXT_PUBLIC_SUBGRAPH_API_KEY` in env variables"
+      );
+    }
+
+    const { data } = await uniswapClient.query({
+      query: gql`
+        query Factories {
+          factories(first: 1) {
+            id
+            poolCount
+            txCount
+            totalVolumeUSD
+            totalVolumeETH
+            totalFeesUSD
+            totalFeesETH
+            totalValueLockedUSD
+            totalValueLockedETH
+          }
+        }
+      `,
+    });
+
+    response = {
+      data: data.factories[0],
+      error: "",
+      success: true,
+    };
+  } catch (error) {
+    response = {
+      ...response,
+      error: `${error}`,
+    };
+  } finally {
+    return response;
+  }
+};
+
+export const getPools = async (
+  limit = 20,
+  skip = 0
+): Promise<IPoolResponse> => {
+  let response: IPoolResponse = {
+    data: [],
+    error: "",
+    success: false,
+  };
+
+  try {
+    const { data } = await uniswapClient.query({
+      query: gql`
+        query Pools {
+          pools(skip: ${skip}, first: ${limit}, orderBy: totalValueLockedUSD, orderDirection: desc) {
+            token0Price
+            id
+            token0 {
+              symbol
+              name
+              decimals
+              totalSupply
+            }
+            token1Price
+            token1 {
+              symbol
+              name
+              decimals
+              totalSupply
+            }
+            txCount
+            volumeUSD
+            totalValueLockedUSD
+          }
+        }
+      `,
+    });
+
+    response = {
+      data: data.pools,
+      error: "",
+      success: true,
+    };
+  } catch (error) {
+    response = {
+      ...response,
+      error: `${error}`,
+    };
+  } finally {
+    return response;
+  }
+};
+
+export const getSwaps = async (
+  limit = 20,
+  skip = 0,
+  token0_ = {},
+  token1_ = {}
+): Promise<ISwapResponse> => {
+  let response: ISwapResponse = {
+    data: [],
+    error: "",
+    success: false,
+  };
+
+  try {
+    const { data } = await uniswapClient.query({
+      query: gql`
+            query Swaps {
+              swaps(
+                    where: {
+                        token0_: ${token0_},
+                        token1_: ${token1_}
+                    },
+                    orderBy: timestamp, orderDirection: desc, first: ${limit}, skip: ${skip}) {
+                id
+                timestamp
+                sender
+                recipient
+                origin
+                amount0
+                amount1
+                amountUSD
+                token0 {
+                  decimals
+                  name
+                  symbol
+                  totalSupply
+                }
+                token1 {
+                  decimals
+                  name
+                  symbol
+                  totalSupply
+                }
+              }
+            }
+          `,
+    });
+
+    response = {
+      data: data.swaps,
+      error: "",
+      success: true,
+    };
+  } catch (error) {
+    response = {
+      ...response,
+      error: `${error}`,
+    };
+  } finally {
+    return response;
+  }
+};
+
+export const getLimitedTokensData = async (
+  limit = 40,
+  skip = 0
+): Promise<ITokenResponse> => {
+  let response: ITokenResponse = {
+    data: [],
+    error: "",
+    success: false,
+  };
+
+  try {
+    const { data } = await uniswapClient.query({
+      query: gql`
+            query Tokens {
+                tokens(
+                    first: ${limit},
+                    skip: ${skip},
+                    orderBy: totalValueLockedUSD,
+                    orderDirection: desc) {
+                    id
+                    symbol
+                    name
+                    decimals
+                }
+            }
+            `,
+    });
+
+    response = {
+      data: data.tokens,
+      error: "",
+      success: true,
+    };
+  } catch (error) {
+    response = {
+      ...response,
+      error: `${error}`,
+    };
+  } finally {
+    return response;
+  }
+};
