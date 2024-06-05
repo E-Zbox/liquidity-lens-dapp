@@ -101,6 +101,7 @@ export const PoolText = styled.h3<IPoolText>`
 `;
 
 export const SwapTable = styled.main`
+  position: relative;
   width: 100%;
   min-width: 800px;
   height: fit-content;
@@ -188,6 +189,7 @@ export const SwapSelect = styled.button`
   color: ${({ theme: { textColor } }) => `${textColor}AE`};
   border: 2px solid ${({ theme: { blue02 } }) => blue02};
   background: ${({ theme: { blue02 } }) => blue02};
+  margin-bottom: var(--ten-px);
   padding: calc(var(--ten-px) * 1.5) calc(var(--ten-px) * 2)
     calc(var(--ten-px) * 1.5) calc(var(--ten-px) * 1.5);
 

@@ -85,8 +85,9 @@ const Card = ({ title }: ICardProps) => {
         $justifyContent="center"
         $width="fit-content"
       >
-        {titleState.map(({ slug, selected }) => (
+        {titleState.map(({ slug, selected }, key) => (
           <CardButton
+            key={key}
             $selected={selected}
             onClick={!selected ? handleCardButtonClick : () => {}}
           >

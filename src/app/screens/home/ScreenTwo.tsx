@@ -143,6 +143,71 @@ const ScreenTwo = () => {
     }
   };
 
+  const fetchSwapTokens = async () => {
+    const selectedToken0 = swapModalTokenState[SWAP_MODAL_TOKEN0].find(
+      (token) => token.selected
+    );
+    const selectedToken1 = swapModalTokenState[SWAP_MODAL_TOKEN1].find(
+      (token) => token.selected
+    );
+
+    if (!selectedToken0 || !selectedToken1) return;
+
+    let token0_ = {
+      symbol: selectedToken0.symbol,
+    };
+
+    let token1_: any = {
+      symbol: selectedToken1.symbol,
+    };
+
+    setLoading(true);
+
+    getSwaps(40, 0, token0_, token1_)
+      .then((res) => {
+        const { data, error, success } = res;
+
+        if (!success) {
+          if (error.includes("bad indexers")) {
+            token0_ = {
+              symbol: selectedToken1.symbol,
+            };
+            token1_ = {
+              symbol: selectedToken0.symbol,
+            };
+
+            setSwapModalTokenState((prevState) => {
+              const updatedToken0State = prevState[SWAP_MODAL_TOKEN0].map(
+                (token, _index) => ({
+                  ...token,
+                  selected: token.symbol === selectedToken1.symbol,
+                })
+              );
+              const updatedToken1State = prevState[SWAP_MODAL_TOKEN1].map(
+                (token, _index) => ({
+                  ...token,
+                  selected: token.symbol === selectedToken0.symbol,
+                })
+              );
+
+              return {
+                [SWAP_MODAL_TOKEN0]: updatedToken0State,
+                [SWAP_MODAL_TOKEN1]: updatedToken1State,
+              };
+            });
+          } else {
+            throw error;
+          }
+        } else {
+          setSwapState(data);
+        }
+      })
+      .catch((err) => {
+        setLoading(false);
+        console.log(err);
+      });
+  };
+
   const renderTab = () => {
     switch (selectedTab.id) {
       case TABS_POOLS_ID:
@@ -208,9 +273,18 @@ const ScreenTwo = () => {
         );
       case TABS_SWAPS_ID:
         /// Swaps
+        const selectedToken0 = swapModalTokenState[SWAP_MODAL_TOKEN0].find(
+          (token) => token.selected
+        );
+        const selectedToken1 = swapModalTokenState[SWAP_MODAL_TOKEN1].find(
+          (token) => token.selected
+        );
         return (
           <>
             <FlexContainer
+              $justifyContent="center"
+              $flexWrap="wrap"
+              $flexDirection="column"
               $height="fit-content"
               $padding={"20px"}
               $miscellaneous="margin-top: calc(var(--ten-px)* 3.5);"
@@ -225,6 +299,18 @@ const ScreenTwo = () => {
                 />
                 <SwapText $isHeader={false}>Token List</SwapText>
               </SwapSelect>
+              {selectedToken0 && selectedToken1 && !loading ? (
+                <FlexContainer
+                  $alignItems="center"
+                  $flexDirection="row"
+                  $width="fit-content"
+                >
+                  <SwapText $isHeader={false}>Showing results for</SwapText>
+                  <TokenPair tokens={[selectedToken0, selectedToken1]} />
+                </FlexContainer>
+              ) : (
+                <></>
+              )}
             </FlexContainer>
             <SwapTable>
               <Swap>
@@ -320,21 +406,26 @@ const ScreenTwo = () => {
                   );
                 }
               )}
+              {loading ? (
+                <PositionContainer
+                  $position="absolute"
+                  $top="0px"
+                  $left="0px"
+                  $alignItems="center"
+                  $height={"100%"}
+                  $justifyContent="flex-start"
+                  $bgColor="#000c"
+                  $padding="100px 0px 0px 0px"
+                >
+                  <Loader
+                    src={isDark ? loaderImgBlack.src : loaderImgWhite.src}
+                    $size={"64px"}
+                  />
+                </PositionContainer>
+              ) : (
+                <></>
+              )}
             </SwapTable>
-            {loading ? (
-              <FlexContainer
-                $alignItems="center"
-                $height={"200px"}
-                $justifyContent="center"
-              >
-                <Loader
-                  src={isDark ? loaderImgBlack.src : loaderImgWhite.src}
-                  $size={"64px"}
-                />
-              </FlexContainer>
-            ) : (
-              <></>
-            )}
             {
               /* Swap Modal */
               showSwapModal ? (
@@ -435,7 +526,10 @@ const ScreenTwo = () => {
 
             setPoolState(data);
           })
-          .catch((err) => console.log(err));
+          .catch((err) => {
+            setLoading(false);
+            console.log(err);
+          });
 
         break;
       case TABS_SWAPS_ID:
@@ -461,13 +555,14 @@ const ScreenTwo = () => {
           .then((res) => {
             const { data, error, success } = res;
 
-            console.log({ data, error, success });
-
             if (!success) throw error;
 
             setSwapState(data);
           })
-          .catch((err) => console.log(err));
+          .catch((err) => {
+            setLoading(false);
+            console.log(err);
+          });
 
         // Swap Modal
         const localStorageSwapModalState = localStorage.getItem(
@@ -523,40 +618,28 @@ const ScreenTwo = () => {
               })),
             });
           })
-          .catch((err) => console.log(err));
+          .catch((err) => {
+            setLoading(false);
+            console.log(err);
+          });
       }
+    }
+
+    const selectedToken0 = swapModalTokenState[SWAP_MODAL_TOKEN0].find(
+      (token) => token.selected
+    );
+    const selectedToken1 = swapModalTokenState[SWAP_MODAL_TOKEN1].find(
+      (token) => token.selected
+    );
+
+    if (selectedToken0 && selectedToken1) {
+      fetchSwapTokens();
     }
   }, [swapModalTokenState]);
 
   useEffect(() => {
     if (!showSwapModal) {
-      const selectedToken0 = swapModalTokenState[SWAP_MODAL_TOKEN0].find(
-        (token) => token.selected
-      );
-      const selectedToken1 = swapModalTokenState[SWAP_MODAL_TOKEN1].find(
-        (token) => token.selected
-      );
-
-      if (!selectedToken0 || !selectedToken1) return;
-
-      const token0_ = {
-        symbol: selectedToken0.symbol,
-      };
-
-      const token1_ = {
-        symbol: selectedToken1.symbol,
-      };
-
-      setLoading(true);
-      getSwaps(40, 0, token0_, token1_)
-        .then((res) => {
-          const { data, error, success } = res;
-
-          if (!success) throw error;
-
-          setSwapState(data);
-        })
-        .catch((err) => console.log(err));
+      fetchSwapTokens();
     }
   }, [showSwapModal]);
 

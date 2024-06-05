@@ -3,6 +3,7 @@ import { ApolloClient, InMemoryCache, gql } from "@apollo/client";
 import {
   IFactoryResponse,
   IPoolResponse,
+  IRecord,
   ISwapResponse,
   ITokenResponse,
 } from "./interface";
@@ -129,8 +130,8 @@ export const getPools = async (
 export const getSwaps = async (
   limit = 20,
   skip = 0,
-  token0_ = {},
-  token1_ = {}
+  token0_: IRecord = {},
+  token1_: IRecord = {}
 ): Promise<ISwapResponse> => {
   let response: ISwapResponse = {
     data: [],
@@ -138,16 +139,42 @@ export const getSwaps = async (
     success: false,
   };
 
+  let where = "";
+
+  let query = `orderBy: timestamp, orderDirection: desc, first: ${limit}, skip: ${skip}`;
+
+  const token0_Keys = Object.getOwnPropertyNames(token0_);
+
+  if (token0_Keys.length > 0) {
+    let token0Query = "{";
+    let token0_Keys = Object.keys(token0_);
+    token0_Keys.map((key, index) => {
+      token0Query = `${token0Query}${key}: "${token0_[key]}"${
+        index < token0_Keys.length - 1 ? ", " : ""
+      }`;
+    });
+    token0Query = `${token0Query}}`;
+
+    let token1Query = "{";
+    let token1_Keys = Object.keys(token1_);
+    token1_Keys.forEach((key, index) => {
+      token1Query = `${token1Query}${key}: "${token1_[key]}"${
+        index < token1_Keys.length - 1 ? ", " : ""
+      }`;
+    });
+    token1Query = `${token1Query}}`;
+
+    where = `token0_: ${token0Query}, token1_: ${token1Query}`;
+    query = `where: {${where}}, ${query}`;
+  }
+
   try {
     const { data } = await uniswapClient.query({
       query: gql`
             query Swaps {
               swaps(
-                    where: {
-                        token0_: ${token0_},
-                        token1_: ${token1_}
-                    },
-                    orderBy: timestamp, orderDirection: desc, first: ${limit}, skip: ${skip}) {
+                    ${query}
+                  ) {
                 id
                 timestamp
                 sender

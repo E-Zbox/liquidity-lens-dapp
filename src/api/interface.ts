@@ -1,3 +1,7 @@
+export interface IRecord {
+  [name: string]: string;
+}
+
 interface IGenericResponse<T> {
   data: T;
   error: string;
